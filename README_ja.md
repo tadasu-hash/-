@@ -61,7 +61,15 @@ run.bat
 
 ## 管理者向け: 完成版の作成と配布
 
-ビルド用PCで `build.bat` を実行します。生成された `dist\cultivation-trimmer` フォルダをZIP化し、そのZIPだけを利用者へ配布してください。利用者は展開後に `run.bat` をダブルクリックするだけで起動できます。
+ビルド用PCで `build.bat` を実行します。`build.bat` は、実際のPythonを `py -3.12`、`py -3`、`python` の順に探し、依存パッケージのインストール・PyInstaller実行・配布物検証をすべて同じPython環境で行います。ビルド完了前に画面は閉じず、失敗時には不完全な配布物を使わないよう案内します。
+
+生成された `dist\cultivation-trimmer` フォルダには、Streamlitのブラウザ画面に必要な `_internal\streamlit\static\index.html` が存在することを自動検証します。完成後、次のURLを開いてアプリが表示されることも確認してください。
+
+```text
+http://localhost:8501
+```
+
+確認後、`dist\cultivation-trimmer` フォルダ全体をZIP化し、そのZIPだけを利用者へ配布してください。完成版では `SETUP_DIAGNOSTIC.cmd` や `setup_and_run.bat` は不要です。利用者は展開後に `run.bat` をダブルクリックするだけで起動できます。
 
 ## テスト
 

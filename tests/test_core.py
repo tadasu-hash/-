@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -76,3 +77,27 @@ def test_excel_combines_selected_jars_with_elapsed_time_and_scatter_charts():
     assert all(chart.__class__.__name__ == "ScatterChart" for chart in sheet._charts)
     assert all(len(chart.series) == 2 for chart in sheet._charts)
     assert sheet.max_row == 6
+
+
+def test_release_builder_copies_streamlit_frontend(tmp_path):
+    from build_release import ensure_streamlit_static
+
+    source = tmp_path / "source-static"
+    source.mkdir()
+    (source / "index.html").write_text("<html></html>", encoding="utf-8")
+    (source / "assets").mkdir()
+    (source / "assets" / "app.js").write_text("console.log('ok')", encoding="utf-8")
+
+    destination = ensure_streamlit_static(source, tmp_path / "dist")
+
+    assert (destination / "index.html").is_file()
+    assert (destination / "assets" / "app.js").is_file()
+
+
+def test_launcher_forces_matching_backend_and_browser_ports():
+    from launcher import streamlit_args
+
+    args = streamlit_args(Path("app.py"))
+    assert "--global.developmentMode=false" in args
+    assert "--server.port=8501" in args
+    assert "--browser.serverPort=8501" in args
