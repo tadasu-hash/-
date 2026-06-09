@@ -1,4 +1,10 @@
 @echo off
+rem Keep a command prompt open even if setup fails before an error handler runs.
+if /I "%~1"=="--keep-open" goto :main
+"%ComSpec%" /d /k call "%~f0" --keep-open
+exit /b
+
+:main
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"

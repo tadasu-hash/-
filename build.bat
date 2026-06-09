@@ -6,4 +6,5 @@ pyinstaller --noconfirm --clean --onedir --name cultivation-trimmer --collect-al
 copy run.bat dist\cultivation-trimmer\run.bat
 copy README_ja.md dist\cultivation-trimmer\README_ja.md
 copy START_HERE.txt dist\cultivation-trimmer\START_HERE.txt
+copy SETUP_DIAGNOSTIC.cmd dist\cultivation-trimmer\SETUP_DIAGNOSTIC.cmd
 endlocal
