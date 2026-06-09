@@ -57,11 +57,22 @@ def test_detection_stuck_sensor_falls_back_all():
     assert result.warning
 
 
-def test_excel_only_selected_jars_and_native_charts():
+def test_excel_combines_selected_jars_with_elapsed_time_and_scatter_charts():
     merged = make_frame()
     selections = {jar: {"start_index": 101, "end_index": 105, "mode": "manual"} for jar in JARS}
+    selections["C"] = {"start_index": 102, "end_index": 104, "mode": "manual"}
     output = build_excel(merged, selections, ["A", "C"], {"START_THRESHOLD": 5})
     book = load_workbook(BytesIO(output))
-    assert book.sheetnames == ["概要", "JarA", "JarC"]
-    assert len(book["JarA"]._charts) == 6
-    assert book["JarA"].max_row == 6
+    assert book.sheetnames == ["概要", "トリミングデータ"]
+    sheet = book["トリミングデータ"]
+    assert sheet["A1"].value == "経過時間"
+    assert sheet["A2"].value.total_seconds() == 0
+    assert sheet["A3"].value.total_seconds() == 5 * 60
+    assert sheet["B1"].value == "JarA TIME"
+    assert sheet["J1"].value == "JarC TIME"
+    assert sheet["K2"].value == 102
+    assert sheet["K5"].value is None
+    assert len(sheet._charts) == 6
+    assert all(chart.__class__.__name__ == "ScatterChart" for chart in sheet._charts)
+    assert all(len(chart.series) == 2 for chart in sheet._charts)
+    assert sheet.max_row == 6

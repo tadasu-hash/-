@@ -102,11 +102,11 @@ def chart_for(frame: pd.DataFrame, start_index: int, end_index: int) -> go.Figur
         fig.add_vrect(x0=start_time, x1=end_time, fillcolor="green", opacity=0.08, line_width=0, row="all", col=1)
         fig.add_vline(x=start_time, line_color="green", line_width=2, row="all", col=1)
         fig.add_vline(x=end_time, line_color="red", line_width=2, row="all", col=1)
-    fig.update_layout(height=620, hovermode="x unified", margin={"t": 55, "b": 20}, legend={"orientation": "h"})
+    fig.update_layout(height=340, hovermode="x unified", margin={"t": 45, "b": 10, "l": 35, "r": 15}, legend={"orientation": "h"})
     return fig
 
 
-tabs = st.tabs([f"ジャー{jar}" for jar in JARS] + ["エクスポート"])
+tabs = st.tabs(["ジャー調整（A～D）", "エクスポート"])
 indices = merged["index"].astype(int).tolist()
 min_index, max_index = indices[0], indices[-1]
 
@@ -130,29 +130,40 @@ def apply_direct(jar: str) -> None:
     st.session_state[f"range_{jar}"] = (valid_start, valid_end)
 
 
-for tab, jar in zip(tabs[:4], JARS):
-    with tab:
-        frame = to_jar_frame(merged, jar)
-        if st.button(f"ジャー{jar}を自動検出", key=f"detect_{jar}"):
-            run_detection(jar)
-        selection = st.session_state.selections[jar]
-        st.slider("選択区間（INDEX）", min_value=min_index, max_value=max_index, value=(selection["start_index"], selection["end_index"]), key=f"range_{jar}", on_change=sync_range, args=(jar,))
-        direct1, direct2, direct3 = st.columns([2, 2, 1])
-        direct1.number_input("開始INDEX（直接入力）", min_value=min_index, max_value=max_index, value=selection["start_index"], key=f"start_{jar}")
-        direct2.number_input("終了INDEX（直接入力）", min_value=min_index, max_value=max_index, value=selection["end_index"], key=f"end_{jar}")
-        direct3.button("直接入力を適用", key=f"apply_{jar}", on_click=apply_direct, args=(jar,))
-        selection = st.session_state.selections[jar]
-        if selection.get("warning"):
-            st.warning(selection["warning"])
-        start_row = frame.loc[frame["index"].eq(selection["start_index"])].iloc[0]
-        end_row = frame.loc[frame["index"].eq(selection["end_index"])].iloc[0]
-        st.caption(f"開始: INDEX {selection['start_index']} / {start_row['time']}　　終了: INDEX {selection['end_index']} / {end_row['time']}　　設定: {selection['mode']}")
-        st.plotly_chart(chart_for(frame, selection["start_index"], selection["end_index"]), use_container_width=True, config={"displaylogo": False})
+def render_jar_panel(jar: str) -> None:
+    """2列×2段レイアウト内にジャーの調整UIを描画する。"""
+    frame = to_jar_frame(merged, jar)
+    st.subheader(f"ジャー{jar}")
+    if st.button(f"ジャー{jar}を自動検出", key=f"detect_{jar}", use_container_width=True):
+        run_detection(jar)
+    selection = st.session_state.selections[jar]
+    st.slider("選択区間（INDEX）", min_value=min_index, max_value=max_index, value=(selection["start_index"], selection["end_index"]), key=f"range_{jar}", on_change=sync_range, args=(jar,))
+    direct1, direct2 = st.columns(2)
+    direct1.number_input("開始INDEX", min_value=min_index, max_value=max_index, value=selection["start_index"], key=f"start_{jar}")
+    direct2.number_input("終了INDEX", min_value=min_index, max_value=max_index, value=selection["end_index"], key=f"end_{jar}")
+    st.button("直接入力を適用", key=f"apply_{jar}", on_click=apply_direct, args=(jar,), use_container_width=True)
+    selection = st.session_state.selections[jar]
+    if selection.get("warning"):
+        st.warning(selection["warning"])
+    start_row = frame.loc[frame["index"].eq(selection["start_index"])].iloc[0]
+    end_row = frame.loc[frame["index"].eq(selection["end_index"])].iloc[0]
+    st.caption(f"開始: {selection['start_index']} / {start_row['time']}　終了: {selection['end_index']} / {end_row['time']}　設定: {selection['mode']}")
+    st.plotly_chart(chart_for(frame, selection["start_index"], selection["end_index"]), use_container_width=True, config={"displaylogo": False})
 
-with tabs[-1]:
+
+with tabs[0]:
+    for row_jars in (JARS[:2], JARS[2:]):
+        columns = st.columns(2)
+        for column, jar in zip(columns, row_jars):
+            with column:
+                with st.container(border=True):
+                    render_jar_panel(jar)
+
+with tabs[1]:
     st.subheader("Excelエクスポート")
     include_merged = st.checkbox("結合元データシートを含める", value=False)
     st.write("出力対象: " + (", ".join(f"Jar{jar}" for jar in selected_jars) if selected_jars else "未選択"))
+    st.caption("選択した全ジャーを1枚の「トリミングデータ」シートへまとめ、開始点を0:00とする5分刻みの経過時間と、項目別の散布図を出力します。")
     try:
         excel = build_excel(merged, st.session_state.selections, selected_jars, parameters, include_merged)
         st.download_button("⑥ Excelをダウンロード", excel, file_name=f"培養トリミング_{datetime.now():%Y%m%d_%H%M}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
