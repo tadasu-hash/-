@@ -2,25 +2,46 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
+title 培養データ トリミング
 
-if exist cultivation-trimmer.exe (
-  cultivation-trimmer.exe
-  exit /b
-)
+if exist "%~dp0cultivation-trimmer.exe" goto :run_exe
+if exist "%~dp0.venv\Scripts\python.exe" goto :run_venv
 
-where py >nul 2>nul
-if %errorlevel%==0 (
-  py -3 -m streamlit run app.py --server.address localhost --browser.gatherUsageStats false
-  exit /b
-)
+py -3 -c "import streamlit, pandas, plotly, openpyxl" >nul 2>nul
+if not errorlevel 1 goto :run_py
+python -c "import streamlit, pandas, plotly, openpyxl" >nul 2>nul
+if not errorlevel 1 goto :run_python
 
-where python >nul 2>nul
-if %errorlevel%==0 (
-  python -m streamlit run app.py --server.address localhost --browser.gatherUsageStats false
-  exit /b
-)
+echo.
+echo エラー: アプリの実行環境が見つかりません。
+echo 初回は setup_and_run.bat をダブルクリックしてください。
+goto :failed
 
-echo Pythonまたは完成版exeが見つかりません。
-echo ソース版を使用する場合は、Python 3.11以上をインストールして setup_and_run.bat を実行してください。
-pause
+:run_exe
+"%~dp0cultivation-trimmer.exe"
+if errorlevel 1 goto :failed
+exit /b 0
+
+:run_venv
+"%~dp0.venv\Scripts\python.exe" -m streamlit run "%~dp0app.py" --server.address localhost --browser.gatherUsageStats false
+if errorlevel 1 goto :failed
+exit /b 0
+
+:run_py
+py -3 -m streamlit run "%~dp0app.py" --server.address localhost --browser.gatherUsageStats false
+if errorlevel 1 goto :failed
+exit /b 0
+
+:run_python
+python -m streamlit run "%~dp0app.py" --server.address localhost --browser.gatherUsageStats false
+if errorlevel 1 goto :failed
+exit /b 0
+
+:failed
+echo.
+echo アプリを起動できませんでした。上に表示されたエラー内容を確認してください。
+echo 解決しない場合は setup_and_run.bat をもう一度実行してください。
+echo.
+echo この画面を閉じるには、何かキーを押してください。
+pause >nul
 exit /b 1
